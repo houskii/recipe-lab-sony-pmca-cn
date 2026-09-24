@@ -1,0 +1,87 @@
+name: cn-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Chinese release tag: cn-v<manifest version>-<positive batch number>'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cn-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.repository == 'houskii/recipe-lab-sony-pmca-cn' && github.ref == 'refs/heads/cn'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: true
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Validate tag and fixed signing configuration
+        env:
+          CN_TAG: ${{ inputs.tag }}
+          ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          VERSION="$(sed -n 's/.*android:versionName="\([^"]*\)".*/\1/p' AndroidManifest.xml)"
+          PREFIX="cn-v$VERSION-"
+          [[ "$CN_TAG" == "$PREFIX"* ]] || { echo 'Tag version must match the manifest'; exit 1; }
+          BATCH="${CN_TAG#"$PREFIX"}"
+          [[ "$BATCH" =~ ^[1-9][0-9]*$ ]] || { echo 'Batch must be a positive integer'; exit 1; }
+          for NAME in ANDROID_KEYSTORE_B64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            [[ -n "${!NAME}" ]] || { echo "::error::Missing repository secret: $NAME"; exit 1; }
+          done
+          # Keep the upstream version validator unchanged; the CN suffix identifies the distribution batch.
+          echo "RELEASE_TAG=v$VERSION" >> "$GITHUB_ENV"
+      - name: Check version and run unit tests
+        run: |
+          ./tools/check-version.sh
+          ./tools/test.sh
+      - name: Install original Android toolchain
+        run: |
+          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          "$SDKMANAGER" 'build-tools;30.0.3' 'platforms;android-28' 'ndk;16.1.4479499'
+      - name: Build signed release with original script
+        env:
+          RELEASE: '1'
+          ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          export ANDROID_SDK="$ANDROID_SDK_ROOT"
+          export ANDROID_NDK="$ANDROID_SDK_ROOT/ndk/16.1.4479499"
+          ./build.sh
+          git diff --exit-code
+          sha256sum --check RecipeLab.apk.sha256
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: signed-cn-release
+          path: |
+            RecipeLab.apk
+            RecipeLab.apk.sha256
+          if-no-files-found: error
+      - name: Publish verified release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          CN_TAG: ${{ inputs.tag }}
+        run: ./tools/publish-cn-release.sh
