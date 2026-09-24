@@ -4,7 +4,7 @@
 
 在索尼 PlayMemories 相机上预览、选择胶片风格，并将参数保存到相机。内置 77 个配方，涵盖富士、柯达、理光 GR、徕卡等风格。
 
-这个分支为简体中文版，提供中文界面和 **A5100 中文操作说明**。A5100 专用适配增加可触摸的配方列表入口，将 MOVIE 键映射为原 AEL 的显示切换，并默认只显示配方小标签。内置精简中文字体，加载失败时回退系统字体。配方参数、相机设置地址和写入方式沿用上游；中文名仅用于显示。
+这是基于 [voxivoid/recipe-lab-sony-pmca](https://github.com/voxivoid/recipe-lab-sony-pmca) 的中文维护分支，提供中文界面和 **A5100 中文操作说明**。A5100 专用适配增加可触摸的配方列表入口，将 MOVIE 键映射为原 AEL 的显示切换，并默认只显示配方小标签。内置精简中文字体，加载失败时回退系统字体。配方参数、相机设置地址和写入方式沿用上游；中文名仅用于显示。
 
 - [A5100 操作速查](docs/A5100.zh-CN.md)
 - [77 个配方名称对照](docs/RECIPES.zh-CN.md)
@@ -12,6 +12,10 @@
 - [常见问题](docs/FAQ.zh-CN.md)
 - [英文原版 README](README.en.md)
 - [上游项目与发布页](https://github.com/voxivoid/recipe-lab-sony-pmca)
+
+[下载中文 APK](https://github.com/houskii/recipe-lab-sony-pmca-cn/releases/latest/download/RecipeLab.apk) · [中文发行记录](https://github.com/houskii/recipe-lab-sony-pmca-cn/releases)
+
+中文分支的 Release 由本仓库独立发布，保留应用名称 Recipe Lab 和原包名。签名与上游官方包不同，不能直接覆盖上游官方安装；卸载会清除收藏。本地开发用的 `.zh` 包与本发布包也不同，不会相互覆盖。
 
 ## 先在 A5100 上试一次
 
